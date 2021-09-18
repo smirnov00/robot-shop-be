@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "deploy": "sls deploy"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.15.5",
+    "@babel/preset-env": "^7.15.6",
+    "babel-loader": "^8.2.2",
+    "serverless-webpack": "^5.5.4",
+    "webpack": "^5.53.0",
+    "webpack-node-externals": "^3.0.0"
+  },
+  "dependencies": {
+    "babel-plugin-source-map-support": "^2.1.3",
+    "source-map-support": "^0.5.20"
+  }
+}

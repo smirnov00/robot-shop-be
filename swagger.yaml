@@ -1,0 +1,60 @@
+swagger: "2.0"
+info:
+  description: "This is the robot-shop API documentation"
+  version: "1.0.0"
+  title: "roboT-Shop"
+host: "6acgl8dup9.execute-api.eu-west-1.amazonaws.com"
+basePath: "/dev"
+schemes:
+- "https"
+paths:
+  /products:
+    get:
+      tags:
+        - "products"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "List of products"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Product"
+  /products/{productId}:
+    get:
+      tags:
+        - "products"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "productId"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Product"
+          schema:
+            type: object
+            properties:
+              product:
+                $ref: "#/definitions/Product"
+        "404":
+          description: "Product not found"
+definitions:
+  Product:
+    type: "object"
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+      description:
+        type: string
+      image:
+        type: string
+      count:
+        type: integer
+      price:
+        type: number
