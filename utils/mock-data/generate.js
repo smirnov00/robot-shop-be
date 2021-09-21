@@ -34,8 +34,10 @@ fs.readFile(path.join(__dirname, './MOCK_DATA.json'), 'utf8', (err, data) => {
   const res = JSON.parse(data)
   .sort(() => Math.random() - 0.5)
   .filter((_, i) => i < NUM_ROWS)
-  .map((productInfo) => ({
-    ...productInfo,
+  .map(({ id, title, description }) => ({
+    id,
+    title,
+    description,
     count: randomizeWithinLimits(COUNT_LIMITS),
     price: randomizeWithinLimits(PRICE_LIMITS, 2),
   }));

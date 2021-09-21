@@ -1,5 +1,26 @@
 # robot-shop-be
 
+## Configuration
+
+Create the `product-service/secrets.json`:
+
+```
+{
+  "pg": {
+    "host": "<pg-host>",
+    "db_name": "<db-name>",
+    "user": "<db-user>",
+    "password": "<db-password>"
+  },
+  "vpc": {
+    "security_group_id": "<security-group-id>",
+    "subnet_id_1": "<subnet-id-1>",
+    "subnet_id_2": "<subnet-id-2>"
+  }
+}
+
+```
+
 ## Deploy
 ```
 npm run deploy

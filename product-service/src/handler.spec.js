@@ -1,29 +1,31 @@
-import { getProductsList, getProductById } from './handler';
-import { findAll, findOneById } from './products.service';
+import { findAll, findOneById, create } from './products.service';
+import { createProductSchema, uuidSchema } from './request-schemas';
+import {
+  successfulResponse, badRequestRespose, notFoundResponse, internalErrorResponse
+} from './response-utils';
+
+import { getProductsList, getProductById, createProduct } from './handler';
 
 jest.mock('./products.service');
+jest.mock('./request-schemas');
+jest.mock('./response-utils');
 
 describe('handler', () => {
-  describe('getProductsList', () => {
-    it('should return list of products', async () => {
-      findAll.mockReturnValue([{
-        id: 'prodId',
-        title: 'prodName'
-      }]);
+  beforeEach(() => {
+    successfulResponse.mockReturnValue('successful-response');
+    badRequestRespose.mockReturnValue('bad-request-response');
+    notFoundResponse.mockReturnValue('not-found-response');
+    internalErrorResponse.mockReturnValue('internal-error-response');
+  });
 
-      const res = await getProductsList({});
-      expect(res).toEqual({
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true,
-        },
-        body: JSON.stringify([{
-          id: 'prodId',
-          title: 'prodName'
-        }]),
-      });
+  describe('getProductsList', () => {
+    it('should return products list', async () => {
+      findAll.mockResolvedValue(['product1', 'product2']);
+
+      const res = await getProductsList();
+
+      expect(successfulResponse).toHaveBeenCalledWith(['product1', 'product2']);
+      expect(res).toBe('successful-response');
     });
   });
 
@@ -36,38 +38,95 @@ describe('handler', () => {
           productId: 'prod-id',
         },
       };
+
+      uuidSchema.validate.mockReturnValue({ value: 'valid-id' });
     });
 
-    it('should return the product', async () => {
-      findOneById.mockReturnValue({
-        id: 'prod-id'
-      });
+    it('should return a product', async () => {
+      findOneById.mockResolvedValue('product');
 
       const res = await getProductById(event);
+
+      expect(successfulResponse).toHaveBeenCalledWith({ product: 'product' });
+      expect(res).toBe('successful-response');
+    });
+
+    it('should return bad-request-response', async () => {
+      uuidSchema.validate.mockReturnValue({ error: 'some-error' });
+
+      const res = await getProductById(event);
+
+      expect(badRequestRespose).toHaveBeenCalled();
+      expect(res).toBe('bad-request-response');
+      expect(uuidSchema.validate).toHaveBeenCalledWith('prod-id');
+    });
+
+    it('should return not-found-response', async () => {
+      findOneById.mockResolvedValue(null);
+
+      const res = await getProductById(event);
+
+      expect(notFoundResponse).toHaveBeenCalled();
+      expect(res).toBe('not-found-response');
+    });
+  });
+
+  describe('createProduct', () => {
+    let event;
+
+    beforeEach(() => {
+      event = {
+        body: '{"foo": "bar"}',
+      };
+    });
+
+    it('should return bad request response', async () => {
+      event.body = 'invalid-json';
+
+      const res = await createProduct(event);
       
-      expect(res).toEqual({
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true,
+      expect(res).toBe('bad-request-response');
+      expect(badRequestRespose).toHaveBeenCalled();
+    });
+
+    it('should return bad request response', async () => {
+      createProductSchema.validate.mockReturnValue({
+        value: '',
+        error: {
+          details: [{ message: 'error1' }],
         },
-        body: JSON.stringify({
-          product: {
-            id: 'prod-id',
-          },
-        }),
       });
+
+      const res = await createProduct(event);
+
+      expect(res).toBe('bad-request-response');
+      expect(badRequestRespose).toHaveBeenCalledWith(['error1']);
     });
 
-    it('should return 404 status code', async () => {
-      findOneById.mockReturnValue(null);
+    it('should return internal error response', async () => {
+      createProductSchema.validate.mockReturnValue({
+        value: 'valid-payload',
+      });
+      create.mockRejectedValue('some-error');
 
-      const res = await getProductById(event);
-      
-      expect(res).toEqual(expect.objectContaining({
-        statusCode: 404,
-      }));
+      const res = await createProduct(event);
+
+      expect(res).toBe('internal-error-response');
+      expect(internalErrorResponse).toHaveBeenCalled();
+    });
+
+    it('should return successful response', async () => {
+      createProductSchema.validate.mockReturnValue({
+        value: 'valid-payload',
+      });
+
+      create.mockResolvedValue('new-product');
+
+      const res = await createProduct(event);
+
+      expect(res).toBe('successful-response');
+      expect(create).toHaveBeenCalledWith('valid-payload');
+      expect(successfulResponse).toHaveBeenCalledWith(null, 204);
     });
   });
 });

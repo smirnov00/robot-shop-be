@@ -26,14 +26,26 @@ provider:
   lambdaHashingVersion: 20201221
   profile: epam
   region: eu-west-1
+  vpc:
+    securityGroupIds:
+      - ${self:custom.secrets.vpc.security_group_id}
+    subnetIds:
+      - ${self:custom.secrets.vpc.subnet_id_1}
+      - ${self:custom.secrets.vpc.subnet_id_2}
+  environment:
+    PG_HOST: ${self:custom.secrets.pg.host}
+    PG_DB_NAME: ${self:custom.secrets.pg.db_name}
+    PG_USER: ${self:custom.secrets.pg.user}
+    PG_PASSWORD: ${self:custom.secrets.pg.password}
 
 plugins:
   - serverless-webpack
 
 custom:
+  secrets: ${file('./secrets.json')}
   webpack:
     webpackConfig: ./webpack.config.js
-    includeModules: true
+    includeModules: true  
 
 # you can overwrite defaults here
 #  stage: dev
@@ -83,6 +95,14 @@ functions:
           path: products/{productId}
           method: get
           cors: true
+  
+  createProduct:
+    handler: src/handler.createProduct
+    events:
+      - http:
+          path: products
+          method: post
+          cors: true
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
@@ -124,14 +144,20 @@ functions:
 #    environment:
 #      variable2: value2
 
-# you can add CloudFormation resource templates here
-#resources:
-#  Resources:
-#    NewResource:
-#      Type: AWS::S3::Bucket
-#      Properties:
-#        BucketName: my-new-bucket
-#  Outputs:
-#     NewOutput:
-#       Description: "Description for the output"
-#       Value: "Some output value"
+resources:
+  Resources:
+    AWSLambdaVPCAccessExecutionRole:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        Description: Creating policy for VPC connetion.
+        Roles:
+          - {"Ref" : "IamRoleLambdaExecution"}
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
