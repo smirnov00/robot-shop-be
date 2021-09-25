@@ -2,13 +2,13 @@ import { findAll, findOneById, create } from './products.service';
 import { createProductSchema, uuidSchema } from './request-schemas';
 import {
   successfulResponse, badRequestRespose, notFoundResponse, internalErrorResponse
-} from './response-utils';
+} from '../../utils/helpers/response-helpers';
 
 import { getProductsList, getProductById, createProduct } from './handler';
 
 jest.mock('./products.service');
 jest.mock('./request-schemas');
-jest.mock('./response-utils');
+jest.mock('../../utils/helpers/response-helpers');
 
 describe('handler', () => {
   beforeEach(() => {

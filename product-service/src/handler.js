@@ -2,7 +2,7 @@ import { findAll, findOneById, create } from './products.service';
 import { createProductSchema, uuidSchema } from './request-schemas';
 import {
   successfulResponse, badRequestRespose, notFoundResponse, internalErrorResponse
-} from './response-utils';
+} from '../../utils/helpers/response-helpers';
 
 export const getProductsList = async () => {
   const res = await findAll();

@@ -1,6 +1,6 @@
 import {
   successfulResponse, badRequestRespose, notFoundResponse, internalErrorResponse,
-} from './response-utils';
+} from './response-helpers';
 
 describe('response-utils', () => {
   describe('successfulResponse', () => {
