@@ -2,6 +2,7 @@ import csv from 'csv-parser';
 
 import { successfulResponse } from '../../utils/helpers/response-helpers';
 import { s3, moveObject } from './s3';
+import { sqs } from './sqs';
 
 export const importProductsFile = async (event) => {
   const { S3_IMPORTS_BACKET } = process.env;
@@ -19,12 +20,13 @@ export const importProductsFile = async (event) => {
   return successfulResponse({ url });
 };
 
-export const importFileParser = (event, context, callback) => {
+export const importFileParser = async (event) => {
   console.log('event', JSON.stringify(event));
-
+  
+  const { SQS_URL } = process.env;
   const { Records } = event;
   
-  Records.forEach(async ({ s3: s3Item }) => {
+  const processedRecords = Records.map(async ({ s3: s3Item }) => {
     const { bucket, object } = s3Item;
 
     const params = {
@@ -37,7 +39,14 @@ export const importFileParser = (event, context, callback) => {
     s3Stream
       .pipe(csv())
       .on('data', (data) => {
-        console.log(data);
+        const sqsPayload = {
+          MessageBody: JSON.stringify(data),
+          QueueUrl: SQS_URL,
+        };
+
+        sqs.sendMessage(sqsPayload, () => {
+          console.log('SQS: products have been sent');
+        });
       });
       
     await new Promise((resolve, reject) => {
@@ -46,11 +55,14 @@ export const importFileParser = (event, context, callback) => {
           reject(err);
         })
         .on('end', () => {
-          resolve();
+          resolve({ bucket, object });
         });
     });
 
     await moveObject(bucket.name, object.key, object.key.replace('uploaded', 'parsed'));
-    callback(null, null);
+    
+    return Promise.resolve({ bucket, object });
   });
+
+  await Promise.all(processedRecords);
 };

@@ -56,6 +56,26 @@ paths:
                 $ref: "#/definitions/Product"
         "404":
           description: "Product not found"
+  /import:
+    get:
+      tags:
+        - "import"
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema: 
+            type: string
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "signed url"
+          schema:
+            type: object
+            properties:
+              url:
+                type: string
 definitions:
   Product:
     type: "object"

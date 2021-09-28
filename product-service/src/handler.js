@@ -1,5 +1,6 @@
-import { findAll, findOneById, create } from './products.service';
+import { findAll, findOneById, create, createOrUpdate } from './products.service';
 import { createProductSchema, uuidSchema } from './request-schemas';
+import { sns } from './sns';
 import {
   successfulResponse, badRequestRespose, notFoundResponse, internalErrorResponse
 } from '../../utils/helpers/response-helpers';
@@ -45,3 +46,30 @@ export const createProduct = async (event) => {
     return internalErrorResponse();
   }
 }
+
+export const catalogBatchProcess = async (event) => {
+  console.log('event', event);
+
+  const { SNS_PRODUCTS_IMPORTED_TOPIC } = process.env;
+  const { Records } = event;
+  
+  const products = Records
+    .map(({ body }) => {
+      const product = JSON.parse(body);
+      return createProductSchema.validate(product);
+    })
+    .filter(({ error }) => !error);
+
+  console.log('Products to be created:', JSON.stringify(products));
+   
+  await Promise.all(products.map(({ value }) => createOrUpdate(value)));
+
+  const publishParams = {
+    Subject: 'Products Import',
+    Message: `${products.length} products have been imported.`,
+    TopicArn: SNS_PRODUCTS_IMPORTED_TOPIC,
+  };
+  console.log('publishing...', publishParams);
+  
+  await sns.publish(publishParams).promise();
+};

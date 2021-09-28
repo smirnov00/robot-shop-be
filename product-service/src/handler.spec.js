@@ -1,11 +1,13 @@
-import { findAll, findOneById, create } from './products.service';
+import { findAll, findOneById, create, createOrUpdate } from './products.service';
 import { createProductSchema, uuidSchema } from './request-schemas';
+import { sns } from './sns';
 import {
   successfulResponse, badRequestRespose, notFoundResponse, internalErrorResponse
 } from '../../utils/helpers/response-helpers';
 
-import { getProductsList, getProductById, createProduct } from './handler';
+import { getProductsList, getProductById, createProduct, catalogBatchProcess } from './handler';
 
+jest.mock('./sns');
 jest.mock('./products.service');
 jest.mock('./request-schemas');
 jest.mock('../../utils/helpers/response-helpers');
@@ -127,6 +129,49 @@ describe('handler', () => {
       expect(res).toBe('successful-response');
       expect(create).toHaveBeenCalledWith('valid-payload');
       expect(successfulResponse).toHaveBeenCalledWith(null, 204);
+    });
+  });
+
+  describe('catalogBatchProcess', () => {
+    it('should process batch import', async () => {
+      const originalEnv = process.env;
+
+      process.env = {
+        ...originalEnv,
+        SNS_PRODUCTS_IMPORTED_TOPIC: 'sns-topic-arn',
+      };
+
+      const event = {
+        Records: [{
+          body: '{"id":"prod-id-1"}',
+        }, {
+          body: '{"id":"prod-id-2"}',
+        }, {
+          body: '{"id":"prod-id-3"}',
+        }],
+      };
+
+      createProductSchema.validate
+        .mockReturnValueOnce({ value: 'prod-1' })
+        .mockReturnValueOnce({ error: 'invalid-id' })
+        .mockReturnValueOnce({ value: 'prod-3' });
+      createOrUpdate.mockResolvedValue({ ok: true });
+      sns.publish.mockReturnValue({
+        promise: jest.fn().mockResolvedValue(null),
+      });
+      
+      await catalogBatchProcess(event);
+      
+      expect(createOrUpdate).toHaveBeenCalledTimes(2);
+      expect(createOrUpdate).toHaveBeenNthCalledWith(1, 'prod-1');
+      expect(createOrUpdate).toHaveBeenNthCalledWith(2, 'prod-3');
+      expect(sns.publish).toHaveBeenCalledWith({
+        Subject: 'Products Import',
+        Message: '2 products have been imported.',
+        TopicArn: 'sns-topic-arn',
+      });
+
+      process.env = originalEnv;
     });
   });
 });

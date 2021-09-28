@@ -8,15 +8,23 @@ provider:
   lambdaHashingVersion: 20201221
   profile: epam
   region: eu-west-1
+
   environment:
     REGION: ${self:provider.region}
     S3_IMPORTS_BACKET: robot-shop-imports
+    SQS_URL:
+      Ref: ImportedProductsQueue 
+
   iamRoleStatements:
     - Effect: "Allow"
       Action:
         - "s3:*"
       Resource:
         - "arn:aws:s3:::${self:provider.environment.S3_IMPORTS_BACKET}/*"
+    - Effect: "Allow"
+      Action: "sqs:*"
+      Resource:
+        - Fn::GetAtt: [ImportedProductsQueue, Arn]
 
 plugins:
   - serverless-webpack
@@ -25,26 +33,6 @@ custom:
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true  
-
-# you can overwrite defaults here
-#  stage: dev
-#  region: us-east-1
-
-# you can add statements to the Lambda function's IAM Role here
-#  iamRoleStatements:
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:ListBucket"
-#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:PutObject"
-#      Resource:
-#        Fn::Join:
-#          - ""
-#          - - "arn:aws:s3:::"
-#            - "Ref" : "ServerlessDeploymentBucket"
-#            - "/*"
 
 functions:
   importProductsFile:
@@ -69,3 +57,17 @@ functions:
           rules:
             - prefix: uploaded/
           existing: true
+
+resources:
+  Resources:
+    ImportedProductsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: imported-products
+
+  Outputs:
+    ImportedProductsQueue:
+      Description: The imported products ARN
+      Value: !GetAtt ImportedProductsQueue.Arn
+      Export:
+        Name: imported-products-queue

@@ -36,3 +36,16 @@ export const create = async ({ id, title, description, price, count }) => {
 
   return product;
 };
+
+export const update = async (id, fields) => {
+  await Product.update(fields, {
+    where: { id },
+  });
+};
+
+export const createOrUpdate = async (fields) => {
+  const { id } = fields;
+  const product = await findOneById(id);
+
+  return !!product ? update(id, fields) : create(fields);
+};
