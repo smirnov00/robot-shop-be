@@ -1,4 +1,5 @@
 import { Product } from './models/product.model';
+import { Stock } from './models/stock.model';
 
 const mapProduct = ({ id, title, description, price, stock }) => ({
   id,
@@ -38,9 +39,17 @@ export const create = async ({ id, title, description, price, count }) => {
 };
 
 export const update = async (id, fields) => {
-  await Product.update(fields, {
+  const { count, ...productFields } = fields;
+
+  await Product.update(productFields, {
     where: { id },
   });
+
+  if (count || count === 0) {
+    await Stock.update({ count }, {
+      where: { product_id: id},
+    });
+  }
 };
 
 export const createOrUpdate = async (fields) => {
